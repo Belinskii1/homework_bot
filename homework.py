@@ -1,9 +1,11 @@
+import logging
 import os
 import time
-import logging
+
 import requests
-from dotenv import load_dotenv
 import telegram
+from dotenv import load_dotenv
+
 import exceptions
 
 load_dotenv()
@@ -153,7 +155,10 @@ def main():
             if result:
                 for homework in result:
                     parse_status_result = parse_status(homework)
-                    send_message(bot, parse_status_result)
+                    bot.send_message(
+                        chat_id=TELEGRAM_CHAT_ID,
+                        text=parse_status_result
+                    )
             time.sleep(RETRY_TIME)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
