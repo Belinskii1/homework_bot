@@ -53,53 +53,38 @@ def send_message(message, bot):
     """Отправка сообщения ботом в чат."""
     logger.info('Отправка {message} для {TELEGRAM_CHAT_ID}')
     try:
-        new_massage = bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+        massage = bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
     except telegram.error.TelegramError as sending_error:
-        logging.error(exceptions.MESSAGE_ERROR.format(error=sending_error))
-    return new_massage
+        logging.error(exceptions.MessageError.format(error=sending_error))
+    return massage
 
 
 def get_api_answer(current_timestamp):
     """делает запрос к серверу."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
-    try:
-        homework_statuses = requests.get(
-            ENDPOINT,
-            params=params,
-            headers=HEADERS,
-        )
-        if homework_statuses.status_code == 200:
-            return homework_statuses.json()
-        else:
-            raise Exception(exceptions.SERVER_PROBLEMS)
-    except Exception as e:
-        logger.exception(f'Бот столкнулся с ошибкой: {e}')
-        send_message(f'Бот столкнулся с ошибкой: {e}')
+    homework_statuses = requests.get(
+        ENDPOINT,
+        params=params,
+        headers=HEADERS,
+    )
+    if homework_statuses.status_code != 200:
+        raise Exception(exceptions.SERVER_PROBLEMS)
+    return homework_statuses.json()
 
 
 def check_response(response: list):
     """Валидация ответов API."""
     if 'error' in response:
-        raise Exception()
-    if type(response['homeworks']) != list:
+        raise exceptions.ResponseError  # Так можно?
+    if not isinstance(response['homeworks'], list):
         raise Exception(exceptions.HOMEWORK_LIST_ERROR)
-    if 'error' in response.keys():
-        raise Exception(exceptions.HOMEWORK_KEY_ERROR)
-    if 'homeworks' not in response.keys():
+    if 'homeworks' not in response:
         raise Exception(exceptions.HOMEWORK_KEY_ERROR)
     return response['homeworks']
-    # Это должно работать, но ломает тесты
-    # Продублировал суть в check_response_status
-    """homework_list = response['homeworks']
-    for homeworks in homework_list:
-        if homeworks.get('status') in HOMEWORK_STATUSES.keys():
-            return homework_list
-        else:
-            raise Exception(PARSE_STATUS_ERROR)
-    return response['homeworks']"""
 
 
+# пытаюсь применить эту проверку в def check_response, но тогда падают тесты
 def check_response_status(homework: dict):
     """Дополнительная валидация ответов API."""
     if not isinstance(homework, dict):
@@ -108,7 +93,7 @@ def check_response_status(homework: dict):
     homework_name = homework.get("homework_name")
     if not status or not homework_name:
         raise KeyError(exceptions.HOMEWORK_KEY_ERROR)
-    if status not in HOMEWORK_STATUSES.keys():
+    if status not in HOMEWORK_STATUSES:
         raise KeyError(exceptions.PARSE_STATUS_ERROR)
     return True
 
@@ -119,55 +104,41 @@ def parse_status(homework: dict):
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
     verdict = HOMEWORK_STATUSES.get(homework_status)
-    # предыдущий код до применения check_response_status(homework)
-    """if homework_status in HOMEWORK_STATUSES.keys():
-        verdict = HOMEWORK_STATUSES.get(homework_status)
-    else:
-        raise ValueError(PARSE_STATUS_ERROR)"""
-    """if homework_status not in HOMEWORK_STATUSES.keys():
-        raise Exception(PARSE_STATUS_ERROR)"""
-    if homework_status is None:
-        raise Exception(exceptions.PARSE_STATUS_ERROR)
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens():
     """Проверка сетевого окружения."""
-    if PRACTICUM_TOKEN is None:
+    PT = PRACTICUM_TOKEN is None
+    TT = TELEGRAM_TOKEN is None
+    TC = TELEGRAM_CHAT_ID is None
+    if PT or TT or TC:
         return False
-    elif TELEGRAM_TOKEN is None:
-        return False
-    elif TELEGRAM_CHAT_ID is None:
-        return False
-    else:
-        return True
+    return True
 
 
 def main():
     """Основная логика работы бота."""
     logger.debug('Запуск бота')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time())
+    time.sleep(RETRY_TIME)
     while True:
         try:
+            current_timestamp = int(time.time())
             api_answer = get_api_answer(current_timestamp)
             result = check_response(api_answer)
             if result:
                 for homework in result:
                     parse_status_result = parse_status(homework)
-                    bot.send_message(
-                        chat_id=TELEGRAM_CHAT_ID,
-                        text=parse_status_result
-                    )
-            time.sleep(RETRY_TIME)
+                    send_message(bot, parse_status_result)
+        # "Не увидел реализации этого требования"
+        # Где можно изучить информацию для такого решения?
+        # Не могу понять с помощью чего это реализуется
         except Exception as error:
-            message = f'Сбой в работе программы: {error}'
-            logging.error('Bot down')
+            message = logger.exception(f'Бот столкнулся с ошибкой: {error}')
             bot.send_message(
                 chat_id=TELEGRAM_CHAT_ID, text=message
             )
-            time.sleep(RETRY_TIME)
-            continue
 
 
 if __name__ == '__main__':
