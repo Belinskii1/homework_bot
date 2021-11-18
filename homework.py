@@ -135,7 +135,7 @@ def main():
         # Где можно изучить информацию для такого решения?
         # Не могу понять с помощью чего это реализуется
         except Exception as error:
-            logging.error('Bot down') 
+            logging.error('Bot down')
             message = logger.exception(f'Бот столкнулся с ошибкой: {error}')
             bot.send_message(
                 chat_id=TELEGRAM_CHAT_ID, text=message
