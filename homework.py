@@ -122,6 +122,7 @@ def main():
     logger.debug('Запуск бота')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     time.sleep(RETRY_TIME)
+    set_errors = set()
     while True:
         try:
             current_timestamp = int(time.time())
@@ -131,15 +132,16 @@ def main():
                 for homework in result:
                     parse_status_result = parse_status(homework)
                     send_message(bot, parse_status_result)
-        # "Не увидел реализации этого требования"
-        # Где можно изучить информацию для такого решения?
-        # Не могу понять с помощью чего это реализуется
         except Exception as error:
             logging.error('Bot down')
-            message = logger.exception(f'Бот столкнулся с ошибкой: {error}')
-            bot.send_message(
-                chat_id=TELEGRAM_CHAT_ID, text=message
-            )
+            if error not in set_errors:
+                set_errors.add(error)
+                message = logger.exception(
+                    f'Бот столкнулся с ошибкой: {error}'
+                )
+                bot.send_message(
+                    chat_id=TELEGRAM_CHAT_ID, text=message
+                )
 
 
 if __name__ == '__main__':
