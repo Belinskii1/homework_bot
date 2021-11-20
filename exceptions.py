@@ -1,24 +1,43 @@
 from logging import error
 
 MESSAGE_ERROR = 'Сообщение не отправлено: {error}'
-HOMEWORK_LIST_ERROR = 'Данные не формате листа {error}'
+HOMEWORK_LIST_ERROR = 'Данные не в формате list {error}'
+HOMEWORK_DICT_ERROR = 'Данные не в формате dict {error}'
 HOMEWORK_KEY_ERROR = 'Ошибка запроса {error}'
 PARSE_STATUS_ERROR = 'Не известный статус {error}'
 SERVER_PROBLEMS = 'Сервер прилег, а ты вставай и разбирайся{error}'
 RESPONSE_ERROR = 'Ошибка запроса{error}'
 
-class Error(Exception):
+
+class BotErrors(Exception):
     """базовый класс для всех исключений."""
     pass
 
 
-class MessageError(Error):
+class MessageError(BotErrors):
     """сообщение не отправлено."""
-    MESSAGE_ERROR = 'Сообщение не отправлено: {error}'
-    print(MESSAGE_ERROR)
+   
 
-
-class ResponseError(Error):
+class ResponseError(BotErrors):
     """Ошибка запроса."""
-    RESPONSE_ERROR = 'Ошибка запроса{error}'
-    print(RESPONSE_ERROR)
+
+
+class ServerError(BotErrors):
+    """Ошибка подключения к серверу."""
+
+
+class HomeworkListError(BotErrors):
+    """данные не в формате list."""
+
+
+class HomeworkKeyError(BotErrors):
+    """ошибка ключа запроса."""
+
+
+class ParseStatusError(BotErrors):
+    """не известный статус."""
+
+
+class HomeworkDictError(BotErrors):
+    """данные не в формате dict."""
+

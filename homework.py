@@ -51,12 +51,12 @@ logger.addHandler(handler)
 
 def send_message(message, bot):
     """Отправка сообщения ботом в чат."""
-    logger.info('Отправка {message} для {TELEGRAM_CHAT_ID}')
     try:
-        massage = bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+        message = bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+        logger.info('Отправка {message} для {TELEGRAM_CHAT_ID}')
     except telegram.error.TelegramError as sending_error:
         logging.error(exceptions.MessageError.format(error=sending_error))
-    return massage
+    return message
 
 
 def get_api_answer(current_timestamp):
@@ -69,31 +69,34 @@ def get_api_answer(current_timestamp):
         headers=HEADERS,
     )
     if homework_statuses.status_code != 200:
-        raise Exception(exceptions.SERVER_PROBLEMS)
+        raise exceptions.ServerError(exceptions.SERVER_PROBLEMS)
     return homework_statuses.json()
 
 
 def check_response(response: list):
     """Валидация ответов API."""
-    if 'error' in response:
-        raise exceptions.ResponseError  # Так можно?
+    if 'error' in response: 
+        raise exceptions.ResponseError(exceptions.RESPONSE_ERROR)
     if not isinstance(response['homeworks'], list):
-        raise Exception(exceptions.HOMEWORK_LIST_ERROR)
+        raise exceptions.HomeworkListError(exceptions.HOMEWORK_LIST_ERROR)
+    """Сначала (в строке 80) проверяется тип в response['homeworks'],
+    а потом проверяется, есть ли вообще ключ homeworks в ответе.
+    Это как-то нелогично, нужно поменять местами"""
+    # Если поменять местами, то падают тесты
     if 'homeworks' not in response:
-        raise Exception(exceptions.HOMEWORK_KEY_ERROR)
-    return response['homeworks']
+        raise exceptions.HomeworkKeyError(exceptions.HOMEWORK_KEY_ERROR)  
+    return response['homeworks'] 
 
 
-# пытаюсь применить эту проверку в def check_response, но тогда падают тесты
 def check_response_status(homework: dict):
     """Дополнительная валидация ответов API."""
     if not isinstance(homework, dict):
-        raise TypeError("Неожиданный ответ API, homework не dict")
+        raise exceptions.HomeworkDictError(exceptions.HOMEWORK_DICT_ERROR)
     status = homework.get("status")
     homework_name = homework.get("homework_name")
-    if not status or not homework_name:
-        raise KeyError(exceptions.HOMEWORK_KEY_ERROR)
-    if status not in HOMEWORK_STATUSES:
+    if not status or not homework_name: 
+        raise KeyError(exceptions.HOMEWORK_KEY_ERROR) 
+    if status not in HOMEWORK_STATUSES: 
         raise KeyError(exceptions.PARSE_STATUS_ERROR)
     return True
 
@@ -121,24 +124,25 @@ def main():
     """Основная логика работы бота."""
     logger.debug('Запуск бота')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    time.sleep(RETRY_TIME)
-    set_errors = set()
+    set_errors = ["test_error"]
     while True:
+        time.sleep(RETRY_TIME)
         try:
             current_timestamp = int(time.time())
             api_answer = get_api_answer(current_timestamp)
+            current_timestamp = api_answer.get(
+                'current_date',
+                current_timestamp)
             result = check_response(api_answer)
-            if result:
-                for homework in result:
-                    parse_status_result = parse_status(homework)
-                    send_message(bot, parse_status_result)
+            for homework in result:
+                parse_status_result = parse_status(homework)
+                send_message(bot, parse_status_result)
         except Exception as error:
             logging.error('Bot down')
-            if error not in set_errors:
-                set_errors.add(error)
-                message = logger.exception(
-                    f'Бот столкнулся с ошибкой: {error}'
-                )
+            if set_errors[-1] != error:
+                set_errors.append(error)
+                message = f'Бот столкнулся с ошибкой: {error}'
+                logger.exception(message)
                 bot.send_message(
                     chat_id=TELEGRAM_CHAT_ID, text=message
                 )
