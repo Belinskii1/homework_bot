@@ -136,10 +136,12 @@ def main():
             result = check_response(api_answer)  # list
             for homework in result:
                 parse_status_result = parse_status(homework)
+                # проверка изменений статуса
                 if set_status[-1] != homework.get('status'):
                     send_message(bot, parse_status_result)
                     set_status.append(homework.get('status'))
                 else:
+                    # логгируем, если не изменился
                     logger.debug('статус не изменился')
         except Exception as error:
             logging.error('Bot down')
