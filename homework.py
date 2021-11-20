@@ -75,7 +75,7 @@ def get_api_answer(current_timestamp):
 
 def check_response(response: list):
     """Валидация ответов API."""
-    if 'error' in response: 
+    if 'error' in response:
         raise exceptions.ResponseError(exceptions.RESPONSE_ERROR)
     if not isinstance(response['homeworks'], list):
         raise exceptions.HomeworkListError(exceptions.HOMEWORK_LIST_ERROR)
@@ -84,8 +84,8 @@ def check_response(response: list):
     Это как-то нелогично, нужно поменять местами"""
     # Если поменять местами, то падают тесты
     if 'homeworks' not in response:
-        raise exceptions.HomeworkKeyError(exceptions.HOMEWORK_KEY_ERROR)  
-    return response['homeworks'] 
+        raise exceptions.HomeworkKeyError(exceptions.HOMEWORK_KEY_ERROR)
+    return response['homeworks']
 
 
 def check_response_status(homework: dict):
@@ -94,9 +94,9 @@ def check_response_status(homework: dict):
         raise exceptions.HomeworkDictError(exceptions.HOMEWORK_DICT_ERROR)
     status = homework.get("status")
     homework_name = homework.get("homework_name")
-    if not status or not homework_name: 
-        raise KeyError(exceptions.HOMEWORK_KEY_ERROR) 
-    if status not in HOMEWORK_STATUSES: 
+    if not status or not homework_name:
+        raise KeyError(exceptions.HOMEWORK_KEY_ERROR)
+    if status not in HOMEWORK_STATUSES:
         raise KeyError(exceptions.PARSE_STATUS_ERROR)
     return True
 
@@ -125,18 +125,22 @@ def main():
     logger.debug('Запуск бота')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     set_errors = ["test_error"]
+    set_status = ["test_status"]
     while True:
         time.sleep(RETRY_TIME)
         try:
-            current_timestamp = int(time.time())
+            current_timestamp = int(time.time())  # первая точка
             api_answer = get_api_answer(current_timestamp)
             current_timestamp = api_answer.get(
-                'current_date',
-                current_timestamp)
-            result = check_response(api_answer)
+                'current_date')  # обновляем точку
+            result = check_response(api_answer)  # list
             for homework in result:
                 parse_status_result = parse_status(homework)
-                send_message(bot, parse_status_result)
+                if set_status[-1] != homework.get('status'):
+                    send_message(bot, parse_status_result)
+                    set_status.append(homework.get('status'))
+                else:
+                    logger.debug('статус не изменился')
         except Exception as error:
             logging.error('Bot down')
             if set_errors[-1] != error:
