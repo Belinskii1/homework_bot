@@ -1,12 +1,12 @@
 from logging import error
 
-MESSAGE_ERROR = 'Сообщение не отправлено: {error}'
-HOMEWORK_LIST_ERROR = 'Данные не в формате list {error}'
-HOMEWORK_DICT_ERROR = 'Данные не в формате dict {error}'
-HOMEWORK_KEY_ERROR = 'Ошибка запроса {error}'
-PARSE_STATUS_ERROR = 'Не известный статус {error}'
-SERVER_PROBLEMS = 'Сервер прилег, а ты вставай и разбирайся{error}'
-RESPONSE_ERROR = 'Ошибка запроса{error}'
+MESSAGE_ERROR = 'Сообщение не отправлено'
+HOMEWORK_LIST_ERROR = 'Данные не в формате list'
+HOMEWORK_DICT_ERROR = 'Данные не в формате dict}'
+HOMEWORK_KEY_ERROR = 'В ответе нет ключа homework_name и/или status'
+PARSE_STATUS_ERROR = 'Не известный статус проверки'
+SERVER_PROBLEMS = 'Сервер прилег, а ты вставай и разбирайся'
+RESPONSE_ERROR = 'В ответе на запрос произошла ошибка'
 
 
 class BotErrors(Exception):
@@ -30,7 +30,7 @@ class HomeworkListError(BotErrors):
     """данные не в формате list."""
 
 
-class HomeworkKeyError(BotErrors):
+class HomeworkKeyError(TypeError):
     """ошибка ключа запроса."""
 
 

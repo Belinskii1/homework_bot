@@ -77,14 +77,10 @@ def check_response(response: list):
     """Валидация ответов API."""
     if 'error' in response:
         raise exceptions.ResponseError(exceptions.RESPONSE_ERROR)
-    if not isinstance(response['homeworks'], list):
-        raise exceptions.HomeworkListError(exceptions.HOMEWORK_LIST_ERROR)
-    """Сначала (в строке 80) проверяется тип в response['homeworks'],
-    а потом проверяется, есть ли вообще ключ homeworks в ответе.
-    Это как-то нелогично, нужно поменять местами"""
-    # Если поменять местами, то падают тесты
     if 'homeworks' not in response:
         raise exceptions.HomeworkKeyError(exceptions.HOMEWORK_KEY_ERROR)
+    if not isinstance(response['homeworks'], list):
+        raise exceptions.HomeworkListError(exceptions.HOMEWORK_LIST_ERROR)
     return response['homeworks']
 
 
@@ -93,9 +89,6 @@ def check_response_status(homework: dict):
     if not isinstance(homework, dict):
         raise exceptions.HomeworkDictError(exceptions.HOMEWORK_DICT_ERROR)
     status = homework.get("status")
-    homework_name = homework.get("homework_name")
-    if not status or not homework_name:
-        raise KeyError(exceptions.HOMEWORK_KEY_ERROR)
     if status not in HOMEWORK_STATUSES:
         raise KeyError(exceptions.PARSE_STATUS_ERROR)
     return True
@@ -112,10 +105,7 @@ def parse_status(homework: dict):
 
 def check_tokens():
     """Проверка сетевого окружения."""
-    PT = PRACTICUM_TOKEN is None
-    TT = TELEGRAM_TOKEN is None
-    TC = TELEGRAM_CHAT_ID is None
-    if PT or TT or TC:
+    if all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]) is False:
         return False
     return True
 
@@ -124,10 +114,8 @@ def main():
     """Основная логика работы бота."""
     logger.debug('Запуск бота')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    set_errors = ["test_error"]
-    set_status = ["test_status"]
+    check_previous_error = "test_error"
     while True:
-        time.sleep(RETRY_TIME)
         try:
             current_timestamp = int(time.time())  # первая точка
             api_answer = get_api_answer(current_timestamp)
@@ -136,19 +124,16 @@ def main():
             result = check_response(api_answer)  # list
             for homework in result:
                 parse_status_result = parse_status(homework)
-                # проверка изменений статуса
-                if set_status[-1] != homework.get('status'):
-                    send_message(bot, parse_status_result)
-                    set_status.append(homework.get('status'))
-                else:
-                    # логгируем, если не изменился
+                send_message(bot, parse_status_result)
+                if homework.get('status') == []:
                     logger.debug('статус не изменился')
+            time.sleep(RETRY_TIME)
         except Exception as error:
-            logging.error('Bot down')
-            if set_errors[-1] != error:
-                set_errors.append(error)
-                message = f'Бот столкнулся с ошибкой: {error}'
-                logger.exception(message)
+            logging.error('Bot down')  # логи в основной файл
+            message = f'Бот столкнулся с ошибкой: {error}'
+            logger.exception(message)  # логи для текущего файла
+            if check_previous_error != error:
+                check_previous_error = error  # обновление ошибки
                 bot.send_message(
                     chat_id=TELEGRAM_CHAT_ID, text=message
                 )
