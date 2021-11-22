@@ -105,16 +105,14 @@ def parse_status(homework: dict):
 
 def check_tokens():
     """Проверка сетевого окружения."""
-    if all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]) is False:
-        return False
-    return True
+    return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
 
 
 def main():
     """Основная логика работы бота."""
     logger.debug('Запуск бота')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    check_previous_error = "test_error"
+    check_previous_error = ""
     while True:
         try:
             current_timestamp = int(time.time())  # первая точка
@@ -125,9 +123,9 @@ def main():
             for homework in result:
                 parse_status_result = parse_status(homework)
                 send_message(bot, parse_status_result)
-                if homework.get('status') == []:
+                if result == []:
                     logger.debug('статус не изменился')
-            time.sleep(RETRY_TIME)
+            check_previous_error = ""  # очищаем при успешной итерации
         except Exception as error:
             logging.error('Bot down')  # логи в основной файл
             message = f'Бот столкнулся с ошибкой: {error}'
@@ -137,7 +135,9 @@ def main():
                 bot.send_message(
                     chat_id=TELEGRAM_CHAT_ID, text=message
                 )
+        time.sleep(RETRY_TIME)
 
 
 if __name__ == '__main__':
+    check_tokens()
     main()
