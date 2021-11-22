@@ -122,7 +122,7 @@ def main():
             result = check_response(api_answer)  # list
             for homework in result:
                 parse_status_result = parse_status(homework)
-                send_message(bot, parse_status_result)
+                send_message(parse_status_result, bot)  # тут была ошибка
                 if result == []:
                     logger.debug('статус не изменился')
             check_previous_error = ""  # очищаем при успешной итерации
