@@ -121,7 +121,7 @@ def main():
                 'current_date')  # обновляем точку
             result = check_response(api_answer)  # list
             if result == []:
-                    logger.debug('статус не изменился')
+                logger.debug('статус не изменился')
             for homework in result:
                 parse_status_result = parse_status(homework)
                 send_message(bot, parse_status_result)
