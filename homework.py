@@ -49,7 +49,7 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 
-def send_message(message, bot):
+def send_message(bot, message):
     """Отправка сообщения ботом в чат."""
     try:
         message = bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
@@ -120,14 +120,13 @@ def main():
             current_timestamp = api_answer.get(
                 'current_date')  # обновляем точку
             result = check_response(api_answer)  # list
+            if result == []:
+                    logger.debug('статус не изменился')
             for homework in result:
                 parse_status_result = parse_status(homework)
-                send_message(parse_status_result, bot)  # тут была ошибка
-                if result == []:
-                    logger.debug('статус не изменился')
+                send_message(bot, parse_status_result)
             check_previous_error = ""  # очищаем при успешной итерации
         except Exception as error:
-            logging.error('Bot down')  # логи в основной файл
             message = f'Бот столкнулся с ошибкой: {error}'
             logger.exception(message)  # логи для текущего файла
             if check_previous_error != error:
@@ -139,5 +138,7 @@ def main():
 
 
 if __name__ == '__main__':
-    check_tokens()
-    main()
+    if check_tokens() is True:
+        main()
+    else:
+        logger.critical('Введены не все ключи доступа')
