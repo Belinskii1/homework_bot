@@ -1,1 +1,1 @@
-worker: python practikum-status-bot
+worker: python homework.py
